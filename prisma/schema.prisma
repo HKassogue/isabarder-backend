@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  COIFFEUR
+  GERANT
+}
+
+enum RdvStatus {
+  DEMANDE
+  CONFIRME
+  ANNULE
+  TERMINE
+  TERMINE_ET_PAYE
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String
+  email        String    @unique
+  passwordHash String
+  photoUrl     String?
+  role         Role      @default(CLIENT)
+  isActive     Boolean   @default(true)
+
+  // RDV: client (pour) et coiffeur (prend)
+  rdvsClient   Rdv[]     @relation("RdvClient")
+  rdvsCoiffeur Rdv[]     @relation("RdvCoiffeur")
+
+  // Disponibilités (créneaux) - surtout pour COIFFEUR
+  creneaux     Creneau[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Service {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  photoUrl  String?
+  details   String?
+  isActive  Boolean  @default(true)
+
+  modeles   Modele[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Modele {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  photoUrl  String?
+  prix      Int
+  dureeMin  Int
+  details   String?
+  isActive  Boolean  @default(true)
+
+  serviceId Int
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  rdvs      Rdv[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceId])
+}
+
+model Creneau {
+  id         Int      @id @default(autoincrement())
+  startAt    DateTime
+  endAt      DateTime
+  isActive   Boolean  @default(true)
+
+  // Un créneau appartient à un coiffeur (User)
+  coiffeurId Int
+  coiffeur   User     @relation(fields: [coiffeurId], references: [id], onDelete: Cascade)
+
+  // Un créneau peut être réservé (au plus 1 RDV actif)
+  rdvs       Rdv[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([coiffeurId])
+  @@index([startAt])
+}
+
+model Rdv {
+  id          Int       @id @default(autoincrement())
+  statut      RdvStatus @default(DEMANDE)
+
+  // date = startAt du créneau (utile côté mobile)
+  date        DateTime
+
+  // Relations
+  clientId    Int
+  client      User      @relation("RdvClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  coiffeurId  Int
+  coiffeur    User      @relation("RdvCoiffeur", fields: [coiffeurId], references: [id], onDelete: Cascade)
+
+  modeleId    Int
+  modele      Modele    @relation(fields: [modeleId], references: [id], onDelete: Restrict)
+
+  creneauId   Int
+  creneau     Creneau   @relation(fields: [creneauId], references: [id], onDelete: Restrict)
+
+  avis        Avis?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([creneauId]) // un seul RDV par créneau
+  @@index([clientId])
+  @@index([coiffeurId])
+  @@index([modeleId])
+}
+
+model Avis {
+  id          Int      @id @default(autoincrement())
+  note        Int
+  commentaire String?
+  date        DateTime @default(now())
+
+  rdvId       Int      @unique
+  rdv         Rdv      @relation(fields: [rdvId], references: [id], onDelete: Cascade)
+
+  @@index([note])
+}
