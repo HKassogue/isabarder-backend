@@ -7,21 +7,22 @@ Backend pédagogique pour une appli de prise de RDV pour salon de coiffure — c
 - Docker (recommandé)
 - VS Code
 
-## 2) Démarrage MySQL (Docker)
+## 2) Démarrage MySQL 
+Lancer votre serveur MySQL via XAMPP, MAMP, ou WAMPSERVER, ou encore à travers un conteneur Docker (configuration déjà faite)
 ```bash
 docker compose up -d
 ```
 
-## 3) Installer dépendances
+## 3) Installation des dépendances
 ```bash
 npm install
 ```
 
 ## 4) Configuration du fichier .env
 - Renommez le fichier .env.example en .env
-```bash
-cp .env.example .env
-```
+    ```bash
+    cp .env.example .env
+    ```
 - Changez les informations d'accès à la base de données (db, user, password, host, port) dans .env.
 
 ## 5) Migrations Prisma
@@ -83,9 +84,28 @@ URL:
 
 ---
 
-## 9) Travail en 3 groupes (suggestion)
-- Groupe CLIENT : RDV (création/annulation), historique, avis, filtres, etc.
-- Groupe COIFFEUR : disponibilité (créneaux), traitement RDV, (paiement plus tard)
-- Groupe GERANT : CRUD services/modèles, gestion coiffeurs, stats (CA, nb prestations)
+## 9) Postman/Insomnia de tests API + exemples de requêtes
+### Import & utilisation (rapide)
 
-Bon TP !
+- Postman → Import → glissez les deux JSON [isabarber_backend.postman_environment.json](isabarber_backend.postman_environment) et [isabarber_backend.postman_collection.json](isabarber_backend.postman_collection.json) (ou importez-les).
+
+- Sélectionnez l’environnement “Salon RDV (local)” en haut à droite.
+
+- Modifiez baseUrl selon votre cas :
+
+    - PC local : http://localhost:4000/api
+
+    - Android Emulator : http://10.0.2.2:4000/api
+
+    - Téléphone : http://IP_DE_VOTRE_PC:4000/api
+
+### Tester par profil (sans retaper les requêtes)
+
+Dans l’environnement, changez :
+
+- loginEmail = client1@salon.test (ou coiffeur1/gerant)
+
+- loginPassword = password123 <br>
+
+Puis lancez Auth → Login : le token est auto-enregistré dans token.
+
