@@ -1,0 +1,325 @@
+###############################################################################
+# request.rest
+# Tests REST Client VS Code pour backend salon de coiffure
+#
+# Extension VS Code recommandée :
+# REST Client - Huachao Mao
+#
+# Ordre conseillé d'exécution :
+# 1. Login gérant
+# 2. Créer service
+# 3. Créer modèle
+# 4. Créer coiffeur
+# 5. Login coiffeur
+# 6. Créer créneau
+# 7. Register client ou login client
+# 8. Réserver RDV
+# 9. Tester les actions client / coiffeur
+#
+# Remarque :
+# Si ton API retourne le token dans data.token au lieu de token,
+# remplace :
+# {{loginClient.response.body.token}}
+# par :
+# {{loginClient.response.body.data.token}}
+###############################################################################
+
+@baseUrl = http://localhost:4000/api
+@contentType = application/json
+
+###############################################################################
+# AUTH - CLIENT
+###############################################################################
+
+### Register client
+# @name registerClient
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "client_test",
+  "email": "client.test@example.com",
+  "password": "Client@123"
+}
+
+### Login client
+# @name loginClient
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "client.test@example.com",
+  "password": "Client@123"
+}
+
+### Profil connecté client
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{loginClient.response.body.token}}
+
+
+###############################################################################
+# AUTH - GERANT
+# Le compte gérant doit exister dans la base, par seed ou création manuelle.
+###############################################################################
+
+### Login gérant
+# @name loginGerant
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "gerant@example.com",
+  "password": "Gerant@123"
+}
+
+### Profil connecté gérant
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{loginGerant.response.body.token}}
+
+
+###############################################################################
+# GERANT - SERVICES
+###############################################################################
+
+### Créer un service
+# @name createService
+POST {{baseUrl}}/gerant/services
+Authorization: Bearer {{loginGerant.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "nom": "Coupe Homme",
+  "photoUrl": "https://example.com/images/coupe-homme.jpg",
+  "details": "Service de coupe homme classique et moderne."
+}
+
+### Modifier un service
+PATCH {{baseUrl}}/gerant/services/{{createService.response.body.id}}
+Authorization: Bearer {{loginGerant.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "nom": "Coupe Homme Premium",
+  "photoUrl": "https://example.com/images/coupe-homme-premium.jpg",
+  "details": "Coupe homme avec finition barbe.",
+  "isActive": true
+}
+
+### Supprimer / désactiver un service
+# Attention : à exécuter seulement si tu veux tester la suppression.
+# DELETE {{baseUrl}}/gerant/services/{{createService.response.body.id}}
+# Authorization: Bearer {{loginGerant.response.body.token}}
+
+
+###############################################################################
+# GERANT - MODELES
+###############################################################################
+
+### Créer un modèle rattaché au service créé
+# @name createModele
+POST {{baseUrl}}/gerant/services/{{createService.response.body.id}}/modeles
+Authorization: Bearer {{loginGerant.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "nom": "Dégradé américain",
+  "photoUrl": "https://example.com/images/degrade-americain.jpg",
+  "prix": 3000,
+  "dureeMin": 45,
+  "details": "Dégradé progressif avec finition soignée."
+}
+
+
+###############################################################################
+# GERANT - COIFFEURS
+###############################################################################
+
+### Créer un coiffeur
+# @name createCoiffeur
+POST {{baseUrl}}/gerant/coiffeurs
+Authorization: Bearer {{loginGerant.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "username": "coiffeur_test",
+  "email": "coiffeur.test@example.com",
+  "password": "Coiffeur@123",
+  "photoUrl": "https://example.com/images/coiffeur-test.jpg"
+}
+
+
+###############################################################################
+# AUTH - COIFFEUR
+###############################################################################
+
+### Login coiffeur
+# @name loginCoiffeur
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "coiffeur1@salon.test",
+  "password": "password123"
+}
+
+### Profil connecté coiffeur
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+
+
+###############################################################################
+# COIFFEUR - CRENEAUX
+###############################################################################
+
+### Créer un créneau
+# @name createCreneau
+POST {{baseUrl}}/coiffeur/creneaux
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "startAt": "2026-06-20T09:00:00.000Z",
+  "endAt": "2026-06-20T09:45:00.000Z"
+}
+
+### Créer un deuxième créneau
+# @name createCreneau2
+POST {{baseUrl}}/coiffeur/creneaux
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "startAt": "2026-06-20T10:00:00.000Z",
+  "endAt": "2026-06-20T10:45:00.000Z"
+}
+
+
+###############################################################################
+# PUBLIC
+###############################################################################
+
+### Liste des services actifs
+GET {{baseUrl}}/public/services
+
+### Liste des modèles d'un service
+GET {{baseUrl}}/public/services/{{createService.response.body.id}}/modeles
+
+### Liste des coiffeurs actifs
+GET {{baseUrl}}/public/coiffeurs
+
+### Créneaux disponibles d'un coiffeur sur une période
+GET {{baseUrl}}/public/coiffeurs/{{createCoiffeur.response.body.id}}/creneaux?from=2026-06-20T00:00:00.000Z&to=2026-06-21T00:00:00.000Z
+
+
+###############################################################################
+# CLIENT - RDV
+###############################################################################
+
+### Créer / réserver un RDV
+# @name createRdv
+POST {{baseUrl}}/client/rdvs
+Authorization: Bearer {{loginClient.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "modeleId": {{createModele.response.body.id}},
+  "creneauId": {{createCreneau.response.body.id}}
+}
+
+### Liste des RDV du client connecté
+GET {{baseUrl}}/client/rdvs
+Authorization: Bearer {{loginClient.response.body.token}}
+
+### Annuler un RDV côté client
+# Attention : si tu annules le RDV ici, les tests suivants sur le même RDV peuvent changer.
+# PATCH {{baseUrl}}/client/rdvs/{{createRdv.response.body.id}}/cancel
+# Authorization: Bearer {{loginClient.response.body.token}}
+
+
+###############################################################################
+# COIFFEUR - RDV
+###############################################################################
+
+### Liste des RDV du coiffeur connecté
+GET {{baseUrl}}/coiffeur/rdvs
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+
+### Confirmer un RDV
+PATCH {{baseUrl}}/coiffeur/rdvs/{{createRdv.response.body.id}}/status
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "statut": "CONFIRME"
+}
+
+### Terminer un RDV
+PATCH {{baseUrl}}/coiffeur/rdvs/{{createRdv.response.body.id}}/status
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "statut": "TERMINE"
+}
+
+### Annuler un RDV côté coiffeur
+# PATCH {{baseUrl}}/coiffeur/rdvs/{{createRdv.response.body.id}}/status
+# Authorization: Bearer {{loginCoiffeur.response.body.token}}
+# Content-Type: {{contentType}}
+#
+# {
+#   "statut": "ANNULE"
+# }
+
+
+###############################################################################
+# CLIENT - AVIS
+###############################################################################
+
+### Donner un avis après RDV terminé
+# @name createAvis
+POST {{baseUrl}}/client/rdvs/{{createRdv.response.body.id}}/avis
+Authorization: Bearer {{loginClient.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "note": 5,
+  "commentaire": "Très bonne prestation, coiffeur ponctuel et professionnel."
+}
+
+
+###############################################################################
+# TESTS D'ERREURS / SECURITE
+###############################################################################
+
+### Erreur attendue : accéder à une route client sans token
+GET {{baseUrl}}/client/rdvs
+
+### Erreur attendue : accéder à une route gérant avec token client
+POST {{baseUrl}}/gerant/services
+Authorization: Bearer {{loginClient.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "nom": "Service interdit",
+  "details": "Ce test doit échouer si le middleware de rôle fonctionne."
+}
+
+### Erreur attendue : réserver le même créneau une deuxième fois
+POST {{baseUrl}}/client/rdvs
+Authorization: Bearer {{loginClient.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "modeleId": {{createModele.response.body.id}},
+  "creneauId": {{createCreneau.response.body.id}}
+}
+
+### Erreur attendue : statut invalide côté coiffeur
+PATCH {{baseUrl}}/coiffeur/rdvs/{{createRdv.response.body.id}}/status
+Authorization: Bearer {{loginCoiffeur.response.body.token}}
+Content-Type: {{contentType}}
+
+{
+  "statut": "PAYE"
+}
